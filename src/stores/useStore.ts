@@ -10,6 +10,7 @@ import type {
   HighlightColor,
   AnnotationType,
   RelativeRect,
+  ProviderConfig,
 } from '../types';
 import { DEFAULT_PROVIDERS } from '../types';
 
@@ -106,7 +107,7 @@ interface AppState {
   // Settings Actions
   updateSettings: (s: Partial<AppSettings>) => void;
   setActiveProvider: (p: AIProvider) => void;
-  updateProviderConfig: (id: AIProvider, config: Partial<AppSettings['providers'][AIProvider]>) => void;
+  updateProviderConfig: (id: string, config: Partial<ProviderConfig>) => void;
 }
 
 const uid = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -332,7 +333,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (v) => set({ sidebarOpen: v }),
-  setSidebarWidth: (w) => set({ sidebarWidth: Math.max(320, Math.min(800, w)) }),
+  setSidebarWidth: (w) => set({ sidebarWidth: Math.max(50, w) }),
   setSidebarTab: (t) => set({ sidebarTab: t }),
   setSettingsOpen: (v) => set({ settingsOpen: v }),
   toggleThumbnailSidebar: () => set((s) => ({ thumbnailSidebarOpen: !s.thumbnailSidebarOpen })),
@@ -349,7 +350,10 @@ export const useStore = create<AppState>((set, get) => ({
         ...s.settings,
         providers: {
           ...s.settings.providers,
-          [id]: { ...s.settings.providers[id], ...config },
+          [id]: {
+            ...((s.settings.providers as Record<string, unknown>)[id] as ProviderConfig),
+            ...config,
+          },
         },
       },
     })),

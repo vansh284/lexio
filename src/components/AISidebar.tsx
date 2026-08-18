@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Send,
   Square,
@@ -27,6 +27,7 @@ export default function AISidebar() {
     selectedRectsForAI,
     pdfText,
     sidebarTab,
+    sidebarWidth,
     settings,
     activeHighlightColor,
     newConversation,
@@ -39,6 +40,7 @@ export default function AISidebar() {
     setSidebarTab,
     setActiveProvider,
     addHighlight,
+    setSidebarWidth,
   } = useStore();
 
   const [input, setInput] = useState('');
@@ -46,9 +48,50 @@ export default function AISidebar() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const resizeRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [startWidth, setStartWidth] = useState(0);
+  const [startX, setStartX] = useState(0);
 
   const activeConv = conversations.find((c) => c.id === activeConversation);
   const activeProviderConfig = settings.providers[settings.activeProvider];
+
+  // Resize handler
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    setStartWidth(sidebarWidth);
+    setStartX(e.clientX);
+    document.body.style.cursor = 'col-resize';
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      e.preventDefault();
+      const deltaX = startX - e.clientX;
+      const newWidth = startWidth + deltaX;
+      const clampedWidth = Math.max(0, newWidth);
+      setSidebarWidth(clampedWidth);
+    };
+
+    const handleMouseUp = () => {
+      if (isResizing) {
+        setIsResizing(false);
+        document.body.style.cursor = '';
+      }
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, startWidth, startX, setSidebarWidth]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -275,7 +318,19 @@ export default function AISidebar() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-surface-1">
+    <div className="h-full flex flex-col bg-surface-1 relative">
+      {/* Resize handle */}
+      <div
+        ref={resizeRef}
+        onMouseDown={handleMouseDown}
+        className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize transition-colors ${
+          isResizing ? 'bg-accent/20' : 'hover:bg-accent/10 group'
+        }`}
+        title="Drag to resize"
+      >
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-surface-4 rounded group-hover:bg-surface-5" />
+      </div>
+
       {/* Tabs */}
       <div className="flex border-b border-surface-3 flex-shrink-0">
         <TabButton
